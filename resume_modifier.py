@@ -33,8 +33,8 @@ def convert_pdf_to_markdown(resume_pdf):
             }
         ],
         #model="llama3-8b-8192",
-        #model="llama-3.2-3b-preview",
-        model="llama-3.1-70b-versatile",
+        model="llama-3.2-3b-preview",
+        #model="llama-3.1-70b-versatile",
     )
     return chat_completion.choices[0].message.content
 
@@ -47,8 +47,8 @@ def adapt_markdown(markdown, jd):
             }
         ],
         #model="llama3-8b-8192",
-        #model="llama-3.2-3b-preview",
-        model="llama-3.1-70b-versatile",
+        model="llama-3.2-3b-preview",
+        #model="llama-3.1-70b-versatile",
         #temperature=1,
     )
     return chat_completion.choices[0].message.content
@@ -79,8 +79,8 @@ def convert_markdown_to_html(adapted_markdown):
             }
         ],
         #model="llama3-8b-8192",
-        #model="llama-3.2-3b-preview",
-        model="llama-3.1-70b-versatile",
+        model="llama-3.2-3b-preview",
+        #model="llama-3.1-70b-versatile",
     )
     return chat_completion.choices[0].message.content
 
@@ -88,9 +88,14 @@ def convert_html_to_pdf(html):
     # Convert Markdown to html
     pdfkit.from_string(html, 'output_resume.pdf')
 
+print("Analysing Resume...")
 markdown = convert_pdf_to_markdown(resume_pdf)
+print("Analysing Job Description...")
 jd = get_jd(jd_link)
+print("Adapting Resume...")
 adapted_markdown = adapt_markdown(markdown, jd)
+print("Little formating to Resume...")
 html = convert_markdown_to_html(adapted_markdown)
+print("Converting Resume to PDF...")
 convert_html_to_pdf(html)
 print("Adapted Resume PDF Genaration Successful.")
