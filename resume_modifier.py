@@ -32,9 +32,9 @@ def convert_pdf_to_markdown(resume_pdf):
                 "content": "Can you convert my resume to markdown? " + text + ".",
             }
         ],
-        model="llama3-8b-8192",
+        #model="llama3-8b-8192",
         #model="llama-3.2-3b-preview",
-        #model="llama-3.1-70b-versatile",
+        model="llama-3.1-70b-versatile",
     )
     return chat_completion.choices[0].message.content
 
@@ -46,9 +46,9 @@ def adapt_markdown(markdown, jd):
                 "content": "I have a resume in Markdown format and a job description. Please adapt my resume to better align with the job description. Ensure the language reflects the key skills and responsibilities from the job posting while retaining the structure of my resume. Tailor bullet points to demonstrate direct relevance to the job requirements. Highlight transferable skills and experience that make me an excellent candidate. And do not add your note in the output. \n Here is my resume:\n " + markdown + "\n\n Here is the job description:\n" + jd + ".",
             }
         ],
-        model="llama3-8b-8192",
+        #model="llama3-8b-8192",
         #model="llama-3.2-3b-preview",
-        #model="llama-3.1-70b-versatile",
+        model="llama-3.1-70b-versatile",
         #temperature=1,
     )
     return chat_completion.choices[0].message.content
@@ -78,9 +78,9 @@ def convert_markdown_to_html(adapted_markdown):
                 "content": "Can you convert resume (markdown) to html? \n" + adapted_markdown + ".",
             }
         ],
-        model="llama3-8b-8192",
+        #model="llama3-8b-8192",
         #model="llama-3.2-3b-preview",
-        #model="llama-3.1-70b-versatile",
+        model="llama-3.1-70b-versatile",
     )
     return chat_completion.choices[0].message.content
 
