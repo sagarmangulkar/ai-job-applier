@@ -2,9 +2,11 @@ import os
 import sys
 import PyPDF2
 import requests
+import pdfkit
 from urllib.request import urlopen
 from bs4 import BeautifulSoup
 from groq import Groq
+#from weasyprint import HTML
 
 client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
@@ -86,8 +88,14 @@ def convert_markdown_to_html(adapted_markdown):
     )
     return chat_completion.choices[0].message.content
 
+def convert_html_to_pdf(html):
+    # Convert Markdown to html
+    pdfkit.from_string(html, 'output_resume.pdf')
+    #HTML(string=html).write_pdf('output.pdf')
+
 markdown = convert_pdf_to_markdown(resume_pdf)
 jd = get_jd(jd_link)
 adapted_markdown = adapt_markdown(markdown, jd)
 html = convert_markdown_to_html(adapted_markdown)
-print(html)
+convert_html_to_pdf(html)
+print("Adapted Resume PDF Genaration Successful.")
