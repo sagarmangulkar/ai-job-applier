@@ -1,13 +1,15 @@
 import os
 import sys
 import PyPDF2
-
+import requests
+from urllib.request import urlopen
+from bs4 import BeautifulSoup
 from groq import Groq
 
-#client = Groq(api_key="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")
 client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
 resume_pdf = sys.argv[1]
+jd_link = sys.argv[2]
 
 def convert_pdf_to_markdown(resume_pdf):
     # Open the PDF file in read-binary mode
@@ -22,7 +24,7 @@ def convert_pdf_to_markdown(resume_pdf):
         for page_num in range(num_pages):
             page = pdf_reader.pages[page_num]
             text = page.extract_text()
-            print(text)
+            #print(text)
 
     # Convert PDF to Markdown
     chat_completion = client.chat.completions.create(
@@ -32,10 +34,44 @@ def convert_pdf_to_markdown(resume_pdf):
                 "content": "Can you convert my resume to markdown? " + text + ".",
             }
         ],
-        model="llama3-8b-8192",
+        #model="llama3-8b-8192",
+        #model="llama-3.2-3b-preview",
+        model="llama-3.1-70b-versatile",
     )
-
     return chat_completion.choices[0].message.content
 
+def adapt_markdown(markdown, jd):
+    chat_completion = client.chat.completions.create(
+        messages=[
+            {
+                "role": "user",
+                "content": "I have a resume in Markdown format and a job description. Please adapt my resume to better align with the job description. Ensure the language reflects the key skills and responsibilities from the job posting while retaining the structure of my resume. Tailor bullet points to demonstrate direct relevance to the job requirements. Highlight transferable skills and experience that make me an excellent candidate. And do not add your note in the output. \n Here is my resume:\n " + markdown + "\n\n Here is the job description:\n" + jd + ".",
+            }
+        ],
+        #model="llama3-8b-8192",
+        #model="llama-3.2-3b-preview",
+        model="llama-3.1-70b-versatile",
+        #temperature=1,
+    )
+    return chat_completion.choices[0].message.content
+
+def get_jd(jd_link):
+    html = urlopen(jd_link).read()
+    soup = BeautifulSoup(html, features="html.parser")
+    # kill all script and style elements
+    for script in soup(["script", "style"]):
+        script.extract()    # rip it out
+    # get text
+    text = soup.get_text()
+    # break into lines and remove leading and trailing space on each
+    lines = (line.strip() for line in text.splitlines())
+    # break multi-headlines into a line each
+    chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
+    # drop blank lines
+    text = '\n'.join(chunk for chunk in chunks if chunk)
+    return text
+
 markdown = convert_pdf_to_markdown(resume_pdf)
-print(markdown)
+jd = get_jd(jd_link)
+adapted = adapt_markdown(markdown, jd)
+print(adapted)
