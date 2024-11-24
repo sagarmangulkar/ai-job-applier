@@ -71,7 +71,23 @@ def get_jd(jd_link):
     text = '\n'.join(chunk for chunk in chunks if chunk)
     return text
 
+def convert_markdown_to_html(adapted_markdown):
+    # Convert Markdown to html
+    chat_completion = client.chat.completions.create(
+        messages=[
+            {
+                "role": "user",
+                "content": "Can you convert resume (markdown) to html? \n" + adapted_markdown + ".",
+            }
+        ],
+        #model="llama3-8b-8192",
+        #model="llama-3.2-3b-preview",
+        model="llama-3.1-70b-versatile",
+    )
+    return chat_completion.choices[0].message.content
+
 markdown = convert_pdf_to_markdown(resume_pdf)
 jd = get_jd(jd_link)
-adapted = adapt_markdown(markdown, jd)
-print(adapted)
+adapted_markdown = adapt_markdown(markdown, jd)
+html = convert_markdown_to_html(adapted_markdown)
+print(html)
