@@ -1,16 +1,20 @@
 import os
-import sys
 import PyPDF2
-import requests
-import pdfkit
+import weasyprint
 from urllib.request import urlopen
 from bs4 import BeautifulSoup
 from groq import Groq
 
-client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
+_client = None
 
-resume_pdf = sys.argv[1]
-jd_link = sys.argv[2]
+def get_client():
+    global _client
+    if _client is None:
+        api_key = os.environ.get("GROQ_API_KEY")
+        if not api_key:
+            raise EnvironmentError("GROQ_API_KEY environment variable is not set")
+        _client = Groq(api_key=api_key)
+    return _client
 
 def convert_pdf_to_markdown(resume_pdf):
     # Open the PDF file in read-binary mode
@@ -25,7 +29,7 @@ def convert_pdf_to_markdown(resume_pdf):
             page = pdf_reader.pages[page_num]
             text = text + page.extract_text()
     # Convert PDF to Markdown
-    chat_completion = client.chat.completions.create(
+    chat_completion = get_client().chat.completions.create(
         messages=[
             {
                 "role": "user",
@@ -33,13 +37,13 @@ def convert_pdf_to_markdown(resume_pdf):
             }
         ],
         #model="llama3-8b-8192",
-        model="llama-3.2-3b-preview",
-        #model="llama-3.1-70b-versatile",
+        #model="llama-3.3-70b-versatile",
+        model="llama-3.3-70b-versatile",
     )
     return chat_completion.choices[0].message.content
 
 def adapt_markdown(markdown, jd):
-    chat_completion = client.chat.completions.create(
+    chat_completion = get_client().chat.completions.create(
         messages=[
             {
                 "role": "user",
@@ -47,7 +51,7 @@ def adapt_markdown(markdown, jd):
             }
         ],
         #model="llama3-8b-8192",
-        model="llama-3.2-3b-preview",
+        model="llama-3.3-70b-versatile",
         #model="llama-3.1-70b-versatile",
         #temperature=1,
     )
@@ -71,7 +75,7 @@ def get_jd(jd_link):
 
 def convert_markdown_to_html(adapted_markdown):
     # Convert Markdown to html
-    chat_completion = client.chat.completions.create(
+    chat_completion = get_client().chat.completions.create(
         messages=[
             {
                 "role": "user",
@@ -79,23 +83,10 @@ def convert_markdown_to_html(adapted_markdown):
             }
         ],
         #model="llama3-8b-8192",
-        model="llama-3.2-3b-preview",
+        model="llama-3.3-70b-versatile",
         #model="llama-3.1-70b-versatile",
     )
     return chat_completion.choices[0].message.content
 
-def convert_html_to_pdf(html):
-    # Convert Markdown to html
-    pdfkit.from_string(html, 'output_resume.pdf')
-
-print("Analysing Resume...")
-markdown = convert_pdf_to_markdown(resume_pdf)
-print("Analysing Job Description...")
-jd = get_jd(jd_link)
-print("Adapting Resume...")
-adapted_markdown = adapt_markdown(markdown, jd)
-print("Little formating to Resume...")
-html = convert_markdown_to_html(adapted_markdown)
-print("Converting Resume to PDF...")
-convert_html_to_pdf(html)
-print("Adapted Resume PDF Genaration Successful.")
+def convert_html_to_pdf(html, output_path):
+    weasyprint.HTML(string=html).write_pdf(output_path)

@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Resume Tailor</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f5f5f5;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 24px;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.1);
+      padding: 40px;
+      width: 100%;
+      max-width: 520px;
+    }
+
+    h1 {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: #111;
+    }
+
+    .subtitle {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 32px;
+    }
+
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 6px;
+    }
+
+    .field { margin-bottom: 20px; }
+
+    input[type="url"] {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    input[type="url"]:focus { border-color: #4f46e5; }
+
+    .file-area {
+      border: 2px dashed #ddd;
+      border-radius: 8px;
+      padding: 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      position: relative;
+    }
+
+    .file-area:hover { border-color: #4f46e5; background: #f8f7ff; }
+
+    .file-area input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    .file-area .file-icon { font-size: 28px; margin-bottom: 8px; }
+
+    .file-area .file-label {
+      font-size: 14px;
+      color: #555;
+    }
+
+    .file-area .file-name {
+      font-size: 13px;
+      color: #4f46e5;
+      font-weight: 600;
+      margin-top: 6px;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      background: #4f46e5;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+      margin-top: 8px;
+    }
+
+    button:hover:not(:disabled) { background: #4338ca; }
+    button:disabled { background: #a5b4fc; cursor: not-allowed; }
+
+    .status-box {
+      margin-top: 24px;
+      padding: 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      display: none;
+    }
+
+    .status-box.processing {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      color: #1d4ed8;
+    }
+
+    .status-box.error {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #b91c1c;
+    }
+
+    .status-box.done {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      color: #15803d;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid #bfdbfe;
+      border-top-color: #1d4ed8;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-right: 8px;
+      vertical-align: middle;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .download-btn {
+      display: none;
+      margin-top: 12px;
+      background: #16a34a;
+    }
+
+    .download-btn:hover { background: #15803d; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>AI Resume Tailor</h1>
+    <p class="subtitle">Upload your resume and paste a job posting URL to get a tailored PDF.</p>
+
+    <form id="form">
+      <div class="field">
+        <label>Resume (PDF)</label>
+        <div class="file-area" id="fileArea">
+          <input type="file" id="resumeFile" accept=".pdf" required />
+          <div class="file-icon">📄</div>
+          <div class="file-label">Click to upload or drag & drop</div>
+          <div class="file-name" id="fileName"></div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Job Posting URL</label>
+        <input type="url" id="jobUrl" placeholder="https://example.com/jobs/123" required />
+      </div>
+
+      <button type="submit" id="submitBtn">Tailor My Resume</button>
+    </form>
+
+    <div class="status-box" id="statusBox">
+      <span class="spinner" id="spinner"></span>
+      <span id="statusText"></span>
+    </div>
+
+    <button class="download-btn" id="downloadBtn">Download Adapted Resume</button>
+  </div>
+
+  <script>
+    const form = document.getElementById('form');
+    const resumeFile = document.getElementById('resumeFile');
+    const fileName = document.getElementById('fileName');
+    const jobUrl = document.getElementById('jobUrl');
+    const submitBtn = document.getElementById('submitBtn');
+    const statusBox = document.getElementById('statusBox');
+    const statusText = document.getElementById('statusText');
+    const spinner = document.getElementById('spinner');
+    const downloadBtn = document.getElementById('downloadBtn');
+
+    resumeFile.addEventListener('change', () => {
+      fileName.textContent = resumeFile.files[0]?.name || '';
+    });
+
+    let pollInterval = null;
+
+    function showStatus(type, message) {
+      statusBox.className = 'status-box ' + type;
+      statusBox.style.display = 'block';
+      spinner.style.display = type === 'processing' ? 'inline-block' : 'none';
+      statusText.textContent = message;
+    }
+
+    function stopPolling() {
+      if (pollInterval) {
+        clearInterval(pollInterval);
+        pollInterval = null;
+      }
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      stopPolling();
+      downloadBtn.style.display = 'none';
+      submitBtn.disabled = true;
+
+      const formData = new FormData();
+      formData.append('resume', resumeFile.files[0]);
+      formData.append('job_url', jobUrl.value);
+
+      showStatus('processing', 'Submitting...');
+
+      let jobId;
+      try {
+        const res = await fetch('/submit', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Submission failed');
+        jobId = data.job_id;
+      } catch (err) {
+        showStatus('error', err.message);
+        submitBtn.disabled = false;
+        return;
+      }
+
+      pollInterval = setInterval(async () => {
+        try {
+          const res = await fetch('/status/' + jobId);
+          const data = await res.json();
+
+          if (data.status === 'processing') {
+            showStatus('processing', data.step || 'Processing...');
+          } else if (data.status === 'done') {
+            stopPolling();
+            showStatus('done', 'Your resume is ready!');
+            downloadBtn.style.display = 'block';
+            downloadBtn.onclick = () => { window.location.href = '/download/' + jobId; };
+            submitBtn.disabled = false;
+          } else if (data.status === 'error') {
+            stopPolling();
+            showStatus('error', 'Error: ' + data.message);
+            submitBtn.disabled = false;
+          }
+        } catch (err) {
+          stopPolling();
+          showStatus('error', 'Lost connection to server.');
+          submitBtn.disabled = false;
+        }
+      }, 3000);
+    });
+  </script>
+</body>
+</html>
